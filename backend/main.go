@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"io"
+	"log"
 	"os"
 	"strings"
 	"time"
@@ -134,8 +135,17 @@ func (s *Server) signup(c *gin.Context) {
 		return
 	}
 
+	token := s.issueToken(c, u.ID.Hex())
+
+	if token == "" {
+		c.JSON(500, gin.H{
+			"error": "Could not create login session",
+		})
+		return
+	}
+
 	c.JSON(201, gin.H{
-		"token": s.issueToken(c, u.ID.Hex()),
+		"token": token,
 		"email": email,
 	})
 }
@@ -174,8 +184,17 @@ func (s *Server) login(c *gin.Context) {
 		return
 	}
 
+	token := s.issueToken(c, u.ID.Hex())
+
+	if token == "" {
+		c.JSON(500, gin.H{
+			"error": "Could not create login session",
+		})
+		return
+	}
+
 	c.JSON(200, gin.H{
-		"token": s.issueToken(c, u.ID.Hex()),
+		"token": token,
 		"email": u.Email,
 	})
 }
@@ -226,7 +245,8 @@ func (s *Server) issueToken(c context.Context, user string) string {
 		user,
 		24*time.Hour,
 	).Err(); err != nil {
-		panic(err)
+		log.Printf("REDIS SESSION SET ERROR: %v", err)
+		return ""
 	}
 
 	return token
